@@ -2,12 +2,19 @@ const jwt = require("jsonwebtoken")
 const crypto = require("crypto")
 const User = require("../models/User")
 const Parent = require("../models/Parent")
+const emailService = require("../services/emailService")
 
 // Generate JWT token
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET || "your-secret-key", {
     expiresIn: "7d",
   })
+}
+
+// Generate OTP
+const generateOTP = () => {
+  // Generate a 6-digit OTP
+  return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
 // @desc    First time login and password change
@@ -170,7 +177,7 @@ const loginUser = async (req, res) => {
   }
 }
 
-// @desc    Forgot Password
+// @desc    Request OTP for Password Reset
 // @route   POST /api/auth/forgot-password
 // @access  Public
 const forgotPassword = async (req, res) => {
@@ -192,19 +199,31 @@ const forgotPassword = async (req, res) => {
       })
     }
 
-    // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString("hex")
-    user.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex")
-    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000 // 10 minutes
+    // Generate OTP
+    const otp = generateOTP()
 
+    // Set OTP expiration (10 minutes)
+    const otpExpiry = Date.now() + 10 * 60 * 1000
+
+    // Save OTP to user record
+    user.resetPasswordToken = otp
+    user.resetPasswordExpires = otpExpiry
     await user.save()
 
-    // In production, send email with reset link
-    // For now, return the token (remove in production)
+    // Send OTP email
+    await emailService.sendOTPEmail({
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      otp: otp,
+    })
+
     res.json({
       success: true,
-      message: "Password reset link sent to email",
-      resetToken, // Remove this in production
+      message: "OTP sent to your email",
+      data: {
+        email: user.email,
+      },
     })
   } catch (error) {
     console.error("Forgot password error:", error)
@@ -216,31 +235,88 @@ const forgotPassword = async (req, res) => {
   }
 }
 
-// @desc    Reset Password
-// @route   POST /api/auth/reset-password
+// @desc    Verify OTP for Password Reset
+// @route   POST /api/auth/verify-otp
 // @access  Public
-const resetPassword = async (req, res) => {
+const verifyOTP = async (req, res) => {
   try {
-    const { token, newPassword } = req.body
+    const { email, otp } = req.body
 
-    if (!token || !newPassword) {
+    if (!email || !otp) {
       return res.status(400).json({
         success: false,
-        message: "Please provide token and new password",
+        message: "Please provide email and OTP",
       })
     }
 
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex")
-
     const user = await User.findOne({
-      resetPasswordToken: hashedToken,
+      email,
+      resetPasswordToken: otp,
       resetPasswordExpires: { $gt: Date.now() },
     })
 
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: "Invalid or expired reset token",
+        message: "Invalid or expired OTP",
+      })
+    }
+
+    // Generate a temporary verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex")
+    user.resetPasswordToken = verificationToken
+    await user.save()
+
+    res.json({
+      success: true,
+      message: "OTP verified successfully",
+      data: {
+        email: user.email,
+        verificationToken,
+      },
+    })
+  } catch (error) {
+    console.error("OTP verification error:", error)
+    res.status(500).json({
+      success: false,
+      message: "OTP verification failed",
+      error: error.message,
+    })
+  }
+}
+
+// @desc    Reset Password after OTP verification
+// @route   POST /api/auth/reset-password
+// @access  Public
+const resetPassword = async (req, res) => {
+  try {
+    const { email, verificationToken, newPassword } = req.body
+
+    if (!email || !verificationToken || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide email, verification token, and new password",
+      })
+    }
+
+    // Validate password
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters long",
+      })
+    }
+
+    const user = await User.findOne({
+      email,
+      resetPasswordToken: verificationToken,
+      resetPasswordExpires: { $gt: Date.now() },
+    })
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired verification token",
       })
     }
 
@@ -295,6 +371,7 @@ module.exports = {
   firstTimeLogin,
   loginUser,
   forgotPassword,
+  verifyOTP,
   resetPassword,
   getUserProfile,
 }

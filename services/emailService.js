@@ -164,6 +164,28 @@ class EmailService {
           </div>
         </div>
       `,
+      "password-reset-otp": `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+          <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <h1 style="color: #2563eb; text-align: center; margin-bottom: 30px;">Password Reset OTP</h1>
+            <p style="font-size: 16px; line-height: 1.6; color: #333;">Dear ${data.firstName} ${data.lastName},</p>
+            <p style="font-size: 16px; line-height: 1.6; color: #333;">We received a request to reset your password. Please use the OTP below to verify your identity:</p>
+            
+            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+              <h2 style="color: #1f2937; letter-spacing: 5px; font-size: 32px; margin: 10px 0;">${data.otp}</h2>
+              <p style="color: #6b7280; margin: 5px 0;">This OTP is valid for 10 minutes</p>
+            </div>
+            
+            <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+              <p style="color: #92400e; margin: 0; font-weight: bold;">⚠️ If you did not request a password reset, please ignore this email or contact support immediately.</p>
+            </div>
+            
+            <p style="font-size: 14px; color: #6b7280; text-align: center; margin-top: 30px;">
+              For security reasons, please do not share this OTP with anyone.
+            </p>
+          </div>
+        </div>
+      `,
     }
     return templates[templateName] || `<p>Email template not found for ${templateName}</p>`
   }
@@ -209,6 +231,14 @@ class EmailService {
       })
       return { success: false, error: error.message }
     }
+  }
+
+  // Send OTP email for password reset
+  async sendOTPEmail(data) {
+    const htmlContent = this.loadTemplate("password-reset-otp", data)
+    const subject = "Password Reset OTP - Kiddo Loom"
+
+    return await this.sendEmail(data.email, subject, htmlContent)
   }
 
   // Send application confirmation email

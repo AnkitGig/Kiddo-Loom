@@ -8,6 +8,7 @@ const {
   firstTimeLogin,
   loginUser,
   forgotPassword,
+  verifyOTP,
   resetPassword,
   getUserProfile,
 } = require("../controllers/authController")
@@ -31,14 +32,19 @@ router.post("/login", loginUser)
 // Purpose: When user logs in for first time with temporary password
 router.post("/first-login", firstTimeLogin)
 
-// 📱 SCREEN: Forgot Password Screen
+// 📱 SCREEN: Forgot Password Screen - Request OTP
 // API: POST /api/auth/forgot-password
-// Purpose: Request password reset link
+// Purpose: Request OTP for password reset
 router.post("/forgot-password", forgotPassword)
+
+// 📱 SCREEN: Verify OTP Screen
+// API: POST /api/auth/verify-otp
+// Purpose: Verify OTP entered by user
+router.post("/verify-otp", verifyOTP)
 
 // 📱 SCREEN: Reset Password Screen
 // API: POST /api/auth/reset-password
-// Purpose: Reset password with token from email
+// Purpose: Reset password after OTP verification
 router.post("/reset-password", resetPassword)
 
 // 📱 SCREEN: Profile Screen (User Info)
