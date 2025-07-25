@@ -160,7 +160,11 @@ const createProgressReport = async (req, res) => {
       attendance,
       teacherNotes,
       photos,
+      sleepInfo,
     } = req.body
+
+    console.log("Creating progress report for childId:", childId)
+    console.log("Request body:", req.body)
 
     // Get parent ID from child
     const parent = await Parent.findOne({ "children._id": childId })
@@ -171,15 +175,7 @@ const createProgressReport = async (req, res) => {
       })
     }
 
-    // Get teacher's room
-    const TeacherProfile = require("../models/TeacherProfile")
-    const teacherProfile = await TeacherProfile.findOne({ userId: req.user._id })
-    if (!teacherProfile) {
-      return res.status(404).json({
-        success: false,
-        message: "Teacher profile not found",
-      })
-    }
+    console.log("Found parent:", parent._id)
 
     const targetDate = new Date(reportDate || new Date())
     targetDate.setHours(0, 0, 0, 0)
@@ -190,13 +186,133 @@ const createProgressReport = async (req, res) => {
       reportDate: targetDate,
     })
 
+    console.log("Existing report:", report ? report._id : "None")
+
+    // Process meals data - convert from the API format to model format
+    const processedMeals = []
+    if (meals) {
+      if (meals.breakfast) {
+        processedMeals.push({
+          type: "breakfast",
+          items: meals.breakfast.notes || "Breakfast",
+          time: "08:00",
+          amountEaten:
+            meals.breakfast.amount === "full"
+              ? "all"
+              : meals.breakfast.amount === "most"
+                ? "most"
+                : meals.breakfast.amount === "some"
+                  ? "some"
+                  : "little",
+        })
+      }
+      if (meals.lunch) {
+        processedMeals.push({
+          type: "lunch",
+          items: meals.lunch.notes || "Lunch",
+          time: "12:00",
+          amountEaten:
+            meals.lunch.amount === "full"
+              ? "all"
+              : meals.lunch.amount === "most"
+                ? "most"
+                : meals.lunch.amount === "some"
+                  ? "some"
+                  : "little",
+        })
+      }
+      if (meals.snack) {
+        processedMeals.push({
+          type: "afternoon_snack",
+          items: meals.snack.notes || "Snack",
+          time: "15:00",
+          amountEaten:
+            meals.snack.amount === "full"
+              ? "all"
+              : meals.snack.amount === "most"
+                ? "most"
+                : meals.snack.amount === "some"
+                  ? "some"
+                  : "little",
+        })
+      }
+    }
+
+    console.log("Processed meals:", processedMeals)
+
+    // Process mood data
+    let processedMood = { overall: "happy" }
+    if (mood) {
+      if (Array.isArray(mood)) {
+        processedMood.overall = mood[0] || "happy"
+        processedMood.notes = mood.join(", ")
+      } else if (typeof mood === "string") {
+        processedMood.overall = mood
+      } else if (mood.overall) {
+        processedMood = mood
+      }
+    }
+
+    console.log("Processed mood:", processedMood)
+
+    // Process sleep sessions from sleepInfo
+    const processedSleepSessions = sleepSessions || []
+    if (sleepInfo && sleepInfo.napTime) {
+      const napStart = sleepInfo.napTime
+      const napDuration = sleepInfo.napDuration || 60
+      const napEndTime = new Date(`2000-01-01 ${napStart}`)
+      napEndTime.setMinutes(napEndTime.getMinutes() + napDuration)
+
+      processedSleepSessions.push({
+        startTime: napStart,
+        endTime: napEndTime.toTimeString().slice(0, 5),
+        duration: napDuration,
+        quality: sleepInfo.sleepQuality || "good",
+      })
+    }
+
+    console.log("Processed sleep sessions:", processedSleepSessions)
+
+    // Process activities
+    const processedActivities = []
+    if (activities && Array.isArray(activities)) {
+      activities.forEach((activity) => {
+        processedActivities.push({
+          name: activity.name || "Activity",
+          category: activity.domain || "general",
+          description: activity.description || "",
+          participation: "active", // Default value
+          skills_demonstrated: activity.skillsObserved || [],
+          time: new Date().toTimeString().slice(0, 5), // Default to current time
+        })
+      })
+    }
+
+    console.log("Processed activities:", processedActivities)
+
     if (report) {
       // Update existing report
-      if (meals) report.meals = meals
-      if (mood) report.mood = mood
-      if (activities) report.activities = activities
-      if (observations) report.observations = observations
-      if (sleepSessions) report.sleepSessions = sleepSessions
+      if (processedMeals.length > 0) report.meals = processedMeals
+      if (processedMood) report.mood = processedMood
+      if (processedActivities.length > 0) report.activities = processedActivities
+      if (observations) {
+        if (typeof observations === "string") {
+          // If observations is a string, convert to the expected format
+          report.observations = [
+            {
+              domain: "General",
+              skill: "Overall Development",
+              indicator: "Daily Observation",
+              observation: observations,
+              photos: photos || [],
+              developmentLevel: "developing",
+            },
+          ]
+        } else {
+          report.observations = observations
+        }
+      }
+      if (processedSleepSessions.length > 0) report.sleepSessions = processedSleepSessions
       if (diaperChanges) report.diaperChanges = diaperChanges
       if (attendance) report.attendance = attendance
       if (teacherNotes) report.teacherNotes = teacherNotes
@@ -204,34 +320,61 @@ const createProgressReport = async (req, res) => {
 
       report.isCompleted = true
       report.parentViewed = false // Reset parent viewed status
+
+      console.log("Updating existing report")
     } else {
       // Create new report
-      report = new ChildProgress({
+      const reportData = {
         childId,
         parentId: parent._id,
         teacherId: req.user._id,
-        roomId: teacherProfile.schoolId, // This should be roomId, not schoolId
         reportDate: targetDate,
-        meals: meals || [],
-        mood: mood || { overall: "happy" },
-        activities: activities || [],
-        observations: observations || [],
-        sleepSessions: sleepSessions || [],
+        meals: processedMeals,
+        mood: processedMood,
+        activities: processedActivities,
+        sleepSessions: processedSleepSessions,
         diaperChanges: diaperChanges || [],
         attendance: attendance || { status: "present" },
         teacherNotes: teacherNotes || "",
         photos: photos || [],
         isCompleted: true,
-      })
+      }
+
+      // Handle observations
+      if (observations) {
+        if (typeof observations === "string") {
+          reportData.observations = [
+            {
+              domain: "General",
+              skill: "Overall Development",
+              indicator: "Daily Observation",
+              observation: observations,
+              photos: photos || [],
+              developmentLevel: "developing",
+            },
+          ]
+        } else {
+          reportData.observations = observations
+        }
+      } else {
+        reportData.observations = []
+      }
+
+      console.log("Creating new report with data:", reportData)
+
+      report = new ChildProgress(reportData)
     }
 
     await report.save()
+    console.log("Report saved successfully:", report._id)
 
     // Populate for response
     await report.populate("teacherId", "firstName lastName profileImage")
-    await report.populate("roomId", "roomName roomNumber")
+    if (report.roomId) {
+      await report.populate("roomId", "roomName roomNumber")
+    }
 
-    res.status(report.isNew ? 201 : 200).json({
+    res.status(200).json({
       success: true,
       message: `Progress report ${report.isNew ? "created" : "updated"} successfully`,
       data: {

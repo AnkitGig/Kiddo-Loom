@@ -20,7 +20,7 @@ const childProgressSchema = new mongoose.Schema(
     roomId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Room",
-      required: true,
+      required: false, // Made optional
     },
     reportDate: {
       type: Date,
@@ -52,6 +52,7 @@ const childProgressSchema = new mongoose.Schema(
       overall: {
         type: String,
         enum: ["playful", "energetic", "calm", "fussy", "sleepy", "excited", "happy"],
+        default: "happy",
       },
       notes: String,
     },
