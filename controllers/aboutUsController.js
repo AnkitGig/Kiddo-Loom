@@ -29,7 +29,7 @@ const createAboutUs = async (req, res) => {
  */
 const getAboutUs = async (req, res) => {
   try {
-    const about = await AboutUs.findOne().sort({ createdAt: -1 })
+    const about = await AboutUs.find().sort({ createdAt: -1 })
     if (!about) return res.status(404).json({ success: false, message: 'About Us not found' })
     res.json({ success: true, data: about })
   } catch (error) {
