@@ -23,7 +23,23 @@ const {
   getApplicationStats,
 } = require("../controllers/adminApplicationController")
 
+
+const { createAboutUs, getAboutUs, updateAboutUs, deleteAboutUs } = require("../controllers/aboutUsController")
+
 const router = express.Router()
+/**
+ * ===========================================
+ * 📄 ABOUT US MANAGEMENT APIS
+ * ===========================================
+ */
+// Create About Us (Admin only)
+router.post("/about", auth, authorize("admin"), createAboutUs)
+// Update About Us (Admin only)
+router.put("/about/:id", auth, authorize("admin"), updateAboutUs)
+// Delete About Us (Admin only)
+router.delete("/about/:id", auth, authorize("admin"), deleteAboutUs)
+// Get About Us (Everyone)
+router.get("/about", getAboutUs)
 
 /**
  * ===========================================
