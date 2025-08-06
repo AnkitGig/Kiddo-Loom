@@ -26,7 +26,7 @@ export const signupHandle = async (req, res) => {
       name: Joi.string().trim().min(2).max(100).required(),
       email: Joi.string().email().required(),
       phone: Joi.string().required(),
-      roomNo: Joi.string().required(),
+      roomNo: Joi.string(),
       education: Joi.string().required(),
       city: Joi.string().required(),
       address: Joi.string().required(),
