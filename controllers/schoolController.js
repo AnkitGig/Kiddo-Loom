@@ -162,7 +162,7 @@ import Joi from "joi";
 // };
 export const allSchoolsHandle = async (req, res) => {
   try {
-    const {id}  = req.body;
+    const {id}  = req.query;
  
     if (id) {
       const data = await School.findOne({_id: id})
