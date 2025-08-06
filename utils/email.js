@@ -17,6 +17,17 @@ var transporter = nodemailer.createTransport({
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
+    tls: {
+        rejectUnauthorized: false
+    }
+});
+
+// Debug: print SMTP transporter config (excluding password)
+console.log("SMTP Config:", {
+    host: "smtp.gmail.com",
+    port: 587,
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
 });
 
 const handlebarOptions = {
@@ -43,6 +54,9 @@ export const sendPasswordMail = async function (name, to, password) {
             password
         },
     };
+
+    // Debug: print mail options
+    console.log("Sending password mail with options:", mailOptions);
 
     // Send email using transporter
     transporter.sendMail(mailOptions, function (err, info) {
