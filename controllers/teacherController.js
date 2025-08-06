@@ -138,6 +138,10 @@ export const loginHandle = async (req, res) => {
       name: user.name,
       email: user.email,
       phone: user.phone,
+      city: user.city,
+      address: user.address,
+      gender: user.gender,
+      education: user.education
     };
 
     return res
