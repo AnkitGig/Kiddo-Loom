@@ -162,30 +162,33 @@ import Joi from "joi";
 // };
 export const allSchoolsHandle = async (req, res) => {
   try {
-    const flag = req.body;
-
-    if (flag == "all") {
-      const data = await School.find()
+    const {id}  = req.body;
+ 
+    if (id) {
+      const data = await School.findOne({_id: id})
         .select("-__v -createdAt -updatedAt")
         .sort({ createdAt: -1 });
-
-      data.map((item) => {
-        item.images.map((img) => {
-          img.url = img.url
-            ? `${process.env.BASE_URL}/schools/${img.url}`
-            : `${process.env.DEFAULT_PIC}`;
-        });
-      });
-
+ 
+      console.log(" ---------->", data);
+ 
+      data.images.map((img)=>{
+        img.url = img.url
+          ? `${process.env.BASE_URL}/schools/${img.url}`
+          : `${process.env.DEFAULT_PIC}`
+      })
+ 
+ 
       return res
         .status(200)
         .json(new ApiResponse(200, data, "Schools fetched successfully"));
     }
-
-    const data = await School.find({ isApproved: { $in: [1, 2] } })
+ 
+    const data = await School.find({ status: { $in: [1, 2] } })
       .select("-__v -createdAt -updatedAt")
       .sort({ createdAt: -1 });
-
+ 
+    console.log(" ---------->", data);
+ 
     data.map((item) => {
       item.images.map((img) => {
         img.url = img.url
@@ -193,7 +196,7 @@ export const allSchoolsHandle = async (req, res) => {
           : `${process.env.DEFAULT_PIC}`;
       });
     });
-
+ 
     return res
       .status(200)
       .json(new ApiResponse(200, data, "Schools fetched successfully"));
