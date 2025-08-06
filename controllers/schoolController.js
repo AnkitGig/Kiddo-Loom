@@ -173,7 +173,7 @@ export const allSchoolsHandle = async (req, res) => {
  
       data.images.map((img)=>{
         img.url = img.url
-          ? `${process.env.BASE_URL}/schools/${img.url}`
+          ? `${process.env.Image_URL}/schools/${img.url}`
           : `${process.env.DEFAULT_PIC}`
       })
  
@@ -192,7 +192,7 @@ export const allSchoolsHandle = async (req, res) => {
     data.map((item) => {
       item.images.map((img) => {
         img.url = img.url
-          ? `${process.env.BASE_URL}/schools/${img.url}`
+          ? `${process.env.Image_URL}/schools/${img.url}`
           : `${process.env.DEFAULT_PIC}`;
       });
     });
@@ -295,7 +295,7 @@ export const schoolDetailsHandle = async (req, res) => {
 
     school.images.map((img) => {
       img.url = img.url
-        ? `${process.env.BASE_URL}/schools/${img.url}`
+        ? `${process.env.Image_URL}/schools/${img.url}`
         : `${process.env.DEFAULT_PIC}`;
     });
 
