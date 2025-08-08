@@ -1,17 +1,18 @@
 import Joi from "joi";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { format } from "date-fns";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
-import path from "path";
 import { generateQR } from "../utils/helpers.js";
 
 import { Parent } from "../models/parent/Parent.js";
+import { Room } from "../models/schools/Room.js";
 import { Child } from "../models/parent/ChildForm.js";
+import { Attendance } from "../models/attendence/Attendence.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { generateRandomString, getExpirationTime } from "../utils/helpers.js";
 import { sendPasswordMail, sendForgotPasswordMail } from "../utils/email.js";
-import { table } from "console";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

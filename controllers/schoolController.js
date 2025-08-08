@@ -6,6 +6,8 @@ import { Teacher } from "../models/teacher/Teacher.js";
 // import { generateRandomString, getExpirationTime } from "../utils/helpers.js";
 // import { sendForgotPasswordMail } from "../utils/email.js";
 import Joi from "joi";
+import { Room } from "../models/schools/Room.js";
+
 // import bcrypt from "bcryptjs";
 // import jwt from "jsonwebtoken";
 
