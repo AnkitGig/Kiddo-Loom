@@ -299,3 +299,209 @@ export const addChildHandle = async (req, res) => {
             .json(new ApiResponse(500, {}, `Internal server error`));
     }
 };
+
+export const myChildHandle = async (req, res) => {
+    try {
+      const { id } = req.query;
+      if (id) {
+        const data = await Child.findOne({
+          _id: id,
+          parentId: req.user.id,
+        }).select(" -__v -createdAt -updatedAt");
+        if (!data)
+          return res
+            .status(404)
+            .json(new ApiResponse(404, {}, `child not found`));
+  
+        let parseData = data.toObject();
+        if (data.roomId) {
+          const childData = {
+            id: data._id.toString(),
+            room: data.roomId,
+            school: data.schoolId.toString(),
+          };
+          const QR = await generateQR(childData);
+  
+          parseData.qrCode = QR;
+        }
+  
+        return res
+          .status(200)
+          .json(new ApiResponse(200, parseData, `child fetched successfully`));
+      }
+  
+      const data = await Child.find({ parentId: req.user.id }).select(
+        "-createdAt -updatedAt  -__v"
+      );
+  
+      if (!data || data.length == 0)
+        return res.status(404).json(new ApiResponse(404, {}, `Child not found`));
+  
+      // const QRCode = await Promise.all(
+      //   data.map(async (item) => {
+      //     if (item.roomId) {
+      //       const childData = {
+      //         id: item._id.toString(),
+      //         room: item.roomId ? item.roomId.toString() : item.roomId,
+      //         school: item.schoolId.toString(),
+      //       };
+  
+      //       return await generateQR(childData);
+      //     }
+      //   })
+      // );
+  
+      const parsedData = await Promise.all(
+        data.map(async (child) => {
+          const childObj = child.toObject();
+  
+          if (child.roomId) {
+            const childData = {
+              id: child._id.toString(),
+              room: child.roomId.toString(),
+              school: child.schoolId?.toString() || null,
+            };
+            const QR = await generateQR(childData);
+            childObj.qrCode = QR;
+          }
+  
+          return childObj;
+        })
+      );
+  
+      return res
+        .status(200)
+        .json(new ApiResponse(200, parsedData, `Childs fetched successfully`));
+    } catch (error) {
+      console.error("Error getting child:", error);
+      return res
+        .status(501)
+        .json(new ApiResponse(500, {}, `Internal server error`));
+    }
+  };
+  
+  export const markAttendenceHandle = async (req, res) => {
+    try {
+      const { student, room, school } = req.body;
+  
+      const schema = Joi.object({
+        student: Joi.string().required(),
+        room: Joi.string().required(),
+        school: Joi.string().required(),
+      });
+  
+      const { error } = schema.validate(req.body);
+      if (error)
+        return res
+          .status(400)
+          .json(new ApiResponse(400, {}, error.details[0].message));
+  
+      const child = await Child.findOne({
+        _id: student,
+        roomId: room,
+        schoolId: school,
+      });
+  
+      console.log(`child ---->`, req.user.id);
+  
+      if (!child)
+        return res
+          .status(404)
+          .json(new ApiResponse(404, {}, `Invalid QR code or student not found`));
+  
+      const roomData = await Room.findOne({
+        _id: room,
+        teacherId: req.user.id,
+      });
+  
+      if (!roomData)
+        return res
+          .status(403)
+          .json(new ApiResponse(403, {}, `You are not authorized for this room`));
+      const today = new Date();
+      const dateOnly = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
+  
+      let attendance = await Attendance.findOne({
+        studentId: student,
+        roomId: room,
+        date: dateOnly,
+      });
+  
+      if (!attendance) {
+        attendance = new Attendance({
+          studentId: student,
+          roomId: room,
+          schoolId: school,
+          date: dateOnly,
+          entryTime: today,
+        });
+      } else if (!attendance.exitTime) {
+        attendance.exitTime = today;
+        attendance.scannedBy = req.user.id;
+      } else {
+        return res
+          .status(400)
+          .json(new ApiResponse(400, {}, "Attendance already completed"));
+      }
+  
+      await attendance.save();
+  
+      return res
+        .status(200)
+        .json(new ApiResponse(200, attendance, "Attendance marked successfully"));
+    } catch (error) {
+      console.error(`Error while marking attendence:`, error);
+      return res
+        .status(501)
+        .json(new ApiResponse(500, {}, `Internal server error`));
+    }
+  };
+  
+  export const childAttendanceHandle = async (req, res) => {
+    try {
+      const { id } = req.query;
+      const child = await Child.findOne({ _id: id, parentId: req.user.id });
+      if (!child)
+        return res
+          .status(404)
+          .json(
+            new ApiResponse(404, {}, `child not found or unauthorized access`)
+          );
+  
+      const data = await Attendance.find({ studentId: id })
+        .select("-__v -createdAt -updatedAt")
+        .populate("studentId", "_id name age parentName")
+        .populate("schoolId", "_id name")
+        .populate("scannedBy", "_id name");
+  
+      if (!data || data.length == 0)
+        return res
+          .status(404)
+          .json(new ApiResponse(404, {}, `attendance not found`));
+      const formattedData = data.map((r) => {
+        const obj = r.toObject();
+        return {
+          ...obj,
+          date: format(new Date(obj.date), "d-M-yyyy,"),
+          entryTime: format(new Date(obj.entryTime), "d-M-yyyy, h:mm:ss a"),
+          exitTime: format(new Date(obj.exitTime), "d-M-yyyy, h:mm:ss a"),
+        };
+      });
+  
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(200, formattedData, `attedance fetched successfully`)
+        );
+    } catch (error) {
+      console.error(`Error while getting attendence:`, error);
+      return res
+        .status(501)
+        .json(new ApiResponse(500, {}, `Internal server error`));
+    }
+  };
+  

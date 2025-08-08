@@ -55,7 +55,11 @@ const ChildSchema = new mongoose.Schema(
       ref: "School",
       required: false, 
     },
-
+     roomId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Room",
+      default: null,
+    },
   },
   {
     timestamps: true,

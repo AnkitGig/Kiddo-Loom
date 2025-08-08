@@ -26,6 +26,7 @@
     "multer": "^2.0.2",
     "nanoid": "^5.1.5",
     "nodemailer": "^7.0.5",
-    "nodemailer-express-handlebars": "^7.0.0"
+    "nodemailer-express-handlebars": "^7.0.0",
+    "qrcode": "^1.5.4"
   }
 }

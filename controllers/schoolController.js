@@ -314,7 +314,7 @@ export const schoolDetailsHandle = async (req, res) => {
 
 export const allTeachersHandle = async (req, res) => {
   try {
-    const { id, schoolId } = req.body;
+    const { id, schoolId } = req.query;
 
     const schema = Joi.object({
       id: Joi.string().allow("").optional(),
@@ -370,4 +370,84 @@ export const allTeachersHandle = async (req, res) => {
       .status(501)
       .json(new ApiResponse(500, {}, `Internal server error`));
   }
+};
+
+export const getRoomsHandle = async (req, res) => {
+  const { id, schoolId } = req.body;
+
+  const schema = Joi.object({
+    id: Joi.string().allow("").optional(),
+    schoolId: Joi.string().optional(),
+  });
+
+  const { error } = schema.validate({ id, schoolId });
+  if (error)
+    return res
+      .status(400)
+      .json(new ApiResponse(400, {}, error.details[0].message));
+
+  const school = await School.findOne({ _id: schoolId, adminId: req.user.id });
+  if (!school)
+    return res
+      .status(401)
+      .json(new ApiResponse(400, {}, `school not found or unauthorized`));
+
+  if (id) {
+    const data = await Room.findOne({ _id: id })
+      .select("-__v -createdAt -updatedAt")
+      .populate(
+        "teacherId",
+        "-password -actToken -linkExpireAt -createdAt -updatedAt -__v -schoolId"
+      )
+      .populate("schoolId", "-createdAt -updatedAt -__v -adminId")
+      .populate({
+        path: "studentIds",
+        select: "-createdAt -updatedAt -__v -schoolId",
+        populate: {
+          path: "parentId",
+          select: "name email phone",
+        },
+      })
+      .populate("createdBy", "-password -actToken -linkExpireAt -createdAt -updatedAt -__v")
+
+      data.schoolId.images.map((img)=>{
+        img.url = img.url ? `${process.env.BASE_URL}/schools/${img.url}`: `${process.env.DEFAULT_PIC}`
+      })
+    if (!data)
+      return res.status(404).json(new ApiResponse(404, {}, `No room found`));
+
+    return res
+      .status(201)
+      .json(new ApiResponse(200, data, `room fetched successfully`));
+  }
+
+  const data = await Room.find({ schoolId: schoolId })
+    .select("-__v -createdAt -updatedAt")
+    .populate(
+      "teacherId",
+      "-password -actToken -linkExpireAt -createdAt -updatedAt -__v -schoolId"
+    )
+    .populate("schoolId", "-createdAt -updatedAt -__v -adminId")
+    .populate({
+      path: "studentIds",
+      select: "-createdAt -updatedAt -__v -schoolId",
+      populate: {
+        path: "parentId",
+        select: "name email phone",
+      },
+    })
+    .populate("createdBy", "-password -actToken -linkExpireAt -createdAt -updatedAt -__v")
+
+    data.map((item)=>{
+      item.schoolId.images.map((img)=>{
+        img.url = img.url ? `${process.env.BASE_URL}/schools/${img.url}`: `${process.env.DEFAULT_PIC}`
+      })
+    })
+
+  if (!data || data.length <= 0)
+    return res.status(404).json(new ApiResponse(404, {}, `No rooms found`));
+
+  return res
+    .status(201)
+    .json(new ApiResponse(200, data, `rooms fetched successfully`));
 };

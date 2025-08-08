@@ -5,13 +5,14 @@ import {
     forgotPasswordHandle,
     verifyPasswordHandle,
     changePasswordHandle,
-    teacherStatusUpdate
+    teacherStatusUpdate,
+    createRoomHandle
 }
 from "../controllers/adminController.js"
 
 import { upload } from "../middlewares/multer.js";
 import { auth, isSuperAdmin } from "../middlewares/auth.js";
-// 
+
 
 const adminRouter = Router();
 
@@ -21,6 +22,7 @@ adminRouter.post("/forgot-password", forgotPasswordHandle);
 adminRouter.get("/verify-password/:id", verifyPasswordHandle);
 adminRouter.post("/change-password", changePasswordHandle);
 adminRouter.patch("/teacher/status", auth, teacherStatusUpdate )
+adminRouter.post("/room", auth, createRoomHandle)
 
 
 
