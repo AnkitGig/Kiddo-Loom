@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import path from "path";
+import { generateQR } from "../utils/helpers.js";
 
 import { Parent } from "../models/parent/Parent.js";
 import { Child } from "../models/parent/ChildForm.js";
