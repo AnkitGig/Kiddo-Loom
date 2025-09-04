@@ -385,7 +385,7 @@ export const myScheduleHandle = async (req, res) => {
     if (!user)
       res.status(400).json(new ApiResponse(400, {}, `teacher not found`));
 
-    const data = await RoomSchedule.findOne({
+    const data = await RoomSchedule.find({
       roomId: id,
       teacherId: req.user.id,
     });
