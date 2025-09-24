@@ -366,10 +366,10 @@ export const scheduleHandle = async (req, res) => {
 
 export const myScheduleHandle = async (req, res) => {
   try {
-    const { id } = req.query;
+    const { roomId } = req.query;
 
     const schema = Joi.object({
-      id: Joi.string().required(),
+      roomId: Joi.string().required(),
     });
     const { error } = schema.validate(req.body);
     if (error)
@@ -377,7 +377,7 @@ export const myScheduleHandle = async (req, res) => {
         .status(400)
         .json(new ApiResponse(400, {}, error.details[0].message));
 
-    const room = await Room.findOne({ _id: id });
+    const room = await Room.findOne({ _id: roomId });
     if (!room)
       res.status(400).json(new ApiResponse(400, {}, `room not found`));
 
@@ -386,7 +386,7 @@ export const myScheduleHandle = async (req, res) => {
       res.status(400).json(new ApiResponse(400, {}, `teacher not found`));
 
     const data = await RoomSchedule.find({
-      roomId: id,
+      roomId: roomId,
       teacherId: req.user.id,
     });
 
