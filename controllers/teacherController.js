@@ -7,7 +7,7 @@ import { generateRandomString, getExpirationTime } from "../utils/helpers.js";
 import { sendForgotPasswordMail, sendPasswordMail } from "../utils/email.js";
 import { Teacher } from "../models/teacher/Teacher.js";
 import { School } from "../models/schools/school.js";
-import {Room} from "../models/schools/Room.js"
+import { Room } from "../models/schools/Room.js"
 import { RoomSchedule } from "../models/schools/Schedule.js";
 
 export const signupHandle = async (req, res) => {
@@ -394,13 +394,40 @@ export const myScheduleHandle = async (req, res) => {
       res.status(400).json(new ApiResponse(400, {}, `No schedule found`));
 
 
-    if (user.schoolId.toString() !== room.schoolId.toString()) 
-        res.status(400).json(new ApiResponse(400, {}, `Unauthorized access`));
+    if (user.schoolId.toString() !== room.schoolId.toString())
+      res.status(400).json(new ApiResponse(400, {}, `Unauthorized access`));
 
-    return res.status(200).json(new ApiResponse(200,data , `schedule data fetched successfully`))
-    
+    return res.status(200).json(new ApiResponse(200, data, `schedule data fetched successfully`))
+
   } catch (error) {
     console.error(`Error while getting schedule:`, error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, {}, `Internal Server Error`));
+  }
+};
+
+export const getProfileHandle = async (req, res) => {
+  try {
+    const user = await Teacher.findById(req.user.id)
+      .select("-password -__v -actToken -linkExpireAt")
+      .populate({
+        path: "schoolId",
+        model: School,
+        select:
+          "_id name description address contactInfo images principalName",
+      });
+
+    if (!user)
+      return res
+        .status(404)
+        .json(new ApiResponse(404, {}, `Teacher not found`));
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, user, `Teacher profile fetched successfully`));
+  } catch (error) {
+    console.error(`Error while fetching teacher profile:`, error);
     return res
       .status(500)
       .json(new ApiResponse(500, {}, `Internal Server Error`));
