@@ -42,19 +42,19 @@ app.get('/', (req, res) => {
   res.send('Hello World!');
 });
 
-app.get("/v1/about", (req, res) => {
+app.get("/api/v1/about", (req, res) => {
   res.sendFile(path.join(__dirname, "view", "about.html"));
 });
-app.get("/v1/terms", (req, res) => {
+app.get("/api/v1/terms", (req, res) => {
   res.sendFile(path.join(__dirname, "view", "terms.html"));
 });
-app.get("/v1/privacyPolicy", (req, res) => {
+app.get("/api/v1/privacyPolicy", (req, res) => {
   res.sendFile(path.join(__dirname, "view", "privacyPolicy.html"));
 });
-app.get("/v1/faq", (req, res) => {
+app.get("/api/v1/faq", (req, res) => {
   res.sendFile(path.join(__dirname, "view", "faq.html"));
 });
-app.get("/v1/help&support", (req, res) => {
+app.get("/api/v1/help&support", (req, res) => {
   res.sendFile(path.join(__dirname, "view", "help&support.html"));
 });
 
