@@ -8,7 +8,8 @@ import {
   teacherRoomsHandle,
   scheduleHandle,
   myScheduleHandle,
-  getProfileHandle
+  getProfileHandle,
+  setDefaultRoomHandle,
 } from "../controllers/teacherController.js";
 import { auth } from "../middlewares/auth.js";
 
@@ -24,5 +25,6 @@ teacherRouter.get("/get-profile", auth, getProfileHandle);
 teacherRouter.get("/rooms", auth, teacherRoomsHandle);
 teacherRouter.post("/schedule", auth, scheduleHandle);
 teacherRouter.get("/schedule", auth, myScheduleHandle)
+teacherRouter.post("/set-default-room", auth, setDefaultRoomHandle);
 
 export default teacherRouter;

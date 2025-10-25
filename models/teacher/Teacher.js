@@ -63,14 +63,18 @@ const teacherSchema = new mongoose.Schema(
             default: null,
         },
 
-        status:{
-           type: Number,
-           enum: [0, 1, 2],
-           default: 1
+        status: {
+            type: Number,
+            enum: [0, 1, 2],
+            default: 1
+        },
 
+        defaultRoomId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Room",
+            default: null,
         }
 
-        
     },
     {
         timestamps: true,

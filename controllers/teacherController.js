@@ -10,6 +10,7 @@ import { School } from "../models/schools/school.js";
 import { Room } from "../models/schools/Room.js"
 import { RoomSchedule } from "../models/schools/Schedule.js";
 
+
 export const signupHandle = async (req, res) => {
   try {
     const {
@@ -423,12 +424,18 @@ export const getProfileHandle = async (req, res) => {
         .status(404)
         .json(new ApiResponse(404, {}, `Teacher not found`));
 
-    // Fetch the room assigned to this teacher (if any)
     const room = await Room.find({ teacherId: req.user.id })
-      .select("-__v -schoolId -createdBy -createdAt -studentIds -teacherId")
+      .select("-__v -schoolId -createdBy -createdAt -studentIds -teacherId");
+
+    let defaultRoom = null;
+    if (user.defaultRoomId) {
+      defaultRoom = await Room.findById(user.defaultRoomId).select("-__v -schoolId -createdBy -createdAt -studentIds -teacherId");
+    }
+
     const payload = {
       user,
       room: room || null,
+      defaultRoom: defaultRoom || null,
     };
 
     return res
@@ -439,5 +446,28 @@ export const getProfileHandle = async (req, res) => {
     return res
       .status(500)
       .json(new ApiResponse(500, {}, `Internal Server Error`));
+  }
+};
+
+export const setDefaultRoomHandle = async (req, res) => {
+  try {
+    const { roomId } = req.body;
+    if (!roomId) {
+      return res.status(400).json(new ApiResponse(400, {}, "roomId is required"));
+    }
+    const room = await Room.findOne({ _id: roomId, teacherId: req.user.id });
+    if (!room) {
+      return res.status(404).json(new ApiResponse(404, {}, "Room not found or not assigned to you"));
+    }
+    const teacher = await Teacher.findById(req.user.id);
+    if (!teacher) {
+      return res.status(404).json(new ApiResponse(404, {}, "Teacher not found"));
+    }
+    teacher.defaultRoomId = roomId;
+    await teacher.save();
+    return res.status(200).json(new ApiResponse(200, {}, "Default room set successfully"));
+  } catch (error) {
+    console.error("Error setting default room:", error);
+    return res.status(500).json(new ApiResponse(500, {}, "Internal Server Error"));
   }
 };
