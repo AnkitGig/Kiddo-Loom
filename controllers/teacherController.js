@@ -423,9 +423,17 @@ export const getProfileHandle = async (req, res) => {
         .status(404)
         .json(new ApiResponse(404, {}, `Teacher not found`));
 
+    // Fetch the room assigned to this teacher (if any)
+    const room = await Room.find({ teacherId: req.user.id })
+      .select("-__v -schoolId -createdBy -createdAt -studentIds -teacherId")
+    const payload = {
+      user,
+      room: room || null,
+    };
+
     return res
       .status(200)
-      .json(new ApiResponse(200, user, `Teacher profile fetched successfully`));
+      .json(new ApiResponse(200, payload, `Teacher profile fetched successfully`));
   } catch (error) {
     console.error(`Error while fetching teacher profile:`, error);
     return res

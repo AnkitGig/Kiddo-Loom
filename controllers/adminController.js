@@ -367,6 +367,48 @@ export const teacherStatusUpdate = async (req, res) => {
   }
 };
 
+export const childStatusUpdate = async (req, res) => {
+  try {
+    const { status, childId } = req.body;
+    const schema = Joi.object({
+      status: Joi.number().required(),
+      childId: Joi.string().required(),
+    });
+
+    const { error } = schema.validate(req.body);
+
+    if (error)
+      return res
+        .status(401)
+        .json(new ApiResponse(400, {}, error.details[0].message));
+
+    const child = await Child.findOne({ _id: childId }).populate("schoolId");
+    if (!child)
+      return res
+        .status(404)
+        .json(new ApiResponse(404, {}, `child not found`));
+
+    if (child.schoolId.adminId.toString() !== req.user.id)
+      return res
+        .status(404)
+        .json(new ApiResponse(404, {}, `Unauthorized access`));
+
+    child.status = status;
+    await child.save();
+
+    let msg = status == 1 ? `Pending` : status == 2 ? `Approved ` : `Rejected`;
+
+    return res
+      .status(201)
+      .json(new ApiResponse(200, {}, `${msg} status updated successfully`));
+  } catch (error) {
+    console.log(`error while update child status`, error);
+    return res
+      .status(501)
+      .json(new ApiResponse(500, {}, `Internal server error`));
+  }
+};
+
 export const createRoomHandle = async (req, res) => {
   try {
     const { roomNo, schoolId, teacherId, studentIds } = req.body;
@@ -379,6 +421,14 @@ export const createRoomHandle = async (req, res) => {
       teacherId: Joi.string().required(),
       studentIds: Joi.array().items(Joi.string()).min(1).required(),
     });
+
+    // Check if room number already exists in the school
+    const existingRoom = await Room.findOne({ roomNo, schoolId });
+    if (existingRoom) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, {}, `Room number ${roomNo} already exists in this school`));
+    }
 
     const { error } = schema.validate(req.body);
 
@@ -459,8 +509,13 @@ export const createRoomHandle = async (req, res) => {
       );
   } catch (error) {
     console.log(`error while creating room `, error);
+    if (error.code === 11000) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, {}, `Room number ${error.keyValue.roomNo} already exists in this school`));
+    }
     return res
-      .status(501)
+      .status(500)
       .json(new ApiResponse(500, {}, `Internal server error`));
   }
 };
