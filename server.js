@@ -3,6 +3,7 @@ import  "dotenv/config.js"
 import {connectDB} from './config/db.js';
 import rootRouter from './routes/root.routes.js';
 import morgan from 'morgan';
+import cors from 'cors';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import path from "path";
@@ -25,6 +26,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
+app.use(cors());
 app.use(express.static(path.join(__dirname, "view")));
 
 app.set('view engine', 'ejs');
