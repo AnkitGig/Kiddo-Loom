@@ -21,7 +21,13 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: npm ci
+    - name: Configure npm cache and tmp
+      run: |
+        npm config set cache $RUNNER_TEMP/.npm --global
+        npm config set tmp $RUNNER_TEMP/tmp --global
+
+    - name: Install dependencies
+      run: npm ci --prefer-offline --no-audit --no-fund
     - run: |
           sudo touch .env 
           echo "${{ secrets.ENV_FILE }}" | tr -d '\r' > .env
