@@ -23,8 +23,8 @@ jobs:
         cache: 'npm'
     - run: npm ci
     - run: |
-          touch .env 
+          sudo touch .env 
           echo "${{ secrets.ENV_FILE }}" | tr -d '\r' > .env
-          chmod 600 .env  
-          ls -lah .env 
-    - run: pm2 restart server.js
+          sudo chmod 600 .env  
+          sudo ls -lah .env 
+    - run: sudo pm2 restart server.js
