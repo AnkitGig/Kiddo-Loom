@@ -1,30 +1,49 @@
 name: Node.js CI
- 
+
 on:
   push:
     branches: [ "main" ]
- 
+
 jobs:
   build:
- 
     runs-on: self-hosted
- 
+
     strategy:
       matrix:
         node-version: [22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
- 
+
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    - run: npm ci
-    - run: |
-          touch .env 
+      # 1️⃣ Checkout your repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2️⃣ Setup Node.js
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          # ❌ removed cache: 'npm' because no lock file exists
+
+      # 3️⃣ Install dependencies (works without package-lock.json)
+      - name: Install dependencies
+        run: npm install
+
+      # 4️⃣ Create environment file (.env)
+      - name: Setup environment variables
+        run: |
+          touch .env
           echo "${{ secrets.ENV_FILE }}" | tr -d '\r' > .env
-          chmod 600 .env  
-          ls -lah .env 
-    - run: pm2 restart server.js
+          chmod 600 .env
+          echo "✅ .env file created successfully"
+          ls -lah .env
+
+      # 5️⃣ Build or prepare project (optional — uncomment if you have a build step)
+      # - name: Build project
+      #   run: npm run build
+
+      # 6️⃣ Start or restart the app using PM2
+      - name: Start or restart server
+        run: |
+          pm2 start server.js --name kiddo-loom || pm2 restart kiddo-loom
+          pm2 save
+          pm2 list
