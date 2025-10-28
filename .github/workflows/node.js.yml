@@ -21,17 +21,10 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - name: Install dependencies
-      env:
-        npm_config_cache: ${{ runner.temp }}/npm-cache
-      run: |
-        mkdir -p $RUNNER_TEMP/npm-cache
-        npm ci
-    - name: Setup environment
-      run: |
-        touch .env 
-        echo "${{ secrets.ENV_FILE }}" | tr -d '\r' > .env
-        chmod 600 .env  
-        ls -lah .env 
-    - name: Restart application
-      run: pm2 restart server.js
+    - run: npm ci
+    - run: |
+          touch .env 
+          echo "${{ secrets.ENV_FILE }}" | tr -d '\r' > .env
+          chmod 600 .env  
+          ls -lah .env 
+    - run: pm2 restart server.js
