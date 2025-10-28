@@ -23,8 +23,8 @@ jobs:
         cache: 'npm'
     - name: Setup npm cache directory
       run: |
-        mkdir -p /home/runner/.npm-cache
-        npm config set cache /home/runner/.npm-cache
+        mkdir -p $RUNNER_TEMP/npm-cache
+        npm config set cache $RUNNER_TEMP/npm-cache
     - name: Install dependencies
       run: npm ci
     - name: Setup environment
