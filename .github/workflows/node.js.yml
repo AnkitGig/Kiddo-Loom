@@ -27,4 +27,4 @@ jobs:
           echo "${{ secrets.ENV_FILE }}" | tr -d '\r' > .env
           chmod 600 .env  
           ls -lah .env 
-    - run: pm2 restart server.js
+    - run:  sudo pm2 start server.js
