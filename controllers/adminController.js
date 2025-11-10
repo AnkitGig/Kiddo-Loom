@@ -384,9 +384,7 @@ export const childStatusUpdate = async (req, res) => {
 
     const child = await Child.findOne({ _id: childId }).populate("schoolId");
     if (!child)
-      return res
-        .status(404)
-        .json(new ApiResponse(404, {}, `child not found`));
+      return res.status(404).json(new ApiResponse(404, {}, `child not found`));
 
     if (child.schoolId.adminId.toString() !== req.user.id)
       return res
@@ -419,7 +417,7 @@ export const createRoomHandle = async (req, res) => {
       roomNo: Joi.string().required(),
       schoolId: Joi.string().required(),
       teacherId: Joi.string().required(),
-      studentIds: Joi.array().items(Joi.string()).min(1).required(),
+      studentIds: Joi.array().items(Joi.string()).min(1).optional(),
     });
 
     // Check if room number already exists in the school
@@ -427,7 +425,13 @@ export const createRoomHandle = async (req, res) => {
     if (existingRoom) {
       return res
         .status(400)
-        .json(new ApiResponse(400, {}, `Room number ${roomNo} already exists in this school`));
+        .json(
+          new ApiResponse(
+            400,
+            {},
+            `Room number ${roomNo} already exists in this school`
+          )
+        );
     }
 
     const { error } = schema.validate(req.body);
@@ -461,46 +465,54 @@ export const createRoomHandle = async (req, res) => {
         .json(new ApiResponse(400, {}, `Unauthorized Access`));
     }
 
-    const invalidStudents = [];
+    let validatedStudentIds = [];
 
-    for (const id of studentIds) {
-      console.log(" ids ---------->", id);
-      const student = await Child.findById(id);
-      if (!student || student.schoolId.toString() !== schoolId) {
-        invalidStudents.push(id);
+    if (studentIds && studentIds.length > 0) {
+      const invalidStudents = [];
+
+      for (const id of studentIds) {
+        console.log(" ids ---------->", id);
+        const student = await Child.findById(id);
+        if (!student || student.schoolId.toString() !== schoolId) {
+          invalidStudents.push(id);
+        }
       }
-    }
 
-    if (invalidStudents.length)
-      return res
-        .status(400)
-        .json(
-          new ApiResponse(
-            400,
-            {},
-            `Student does not belong to school: ${invalidStudents.join(", ")}`
-          )
-        );
+      if (invalidStudents.length)
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              {},
+              `Student does not belong to school: ${invalidStudents.join(", ")}`
+            )
+          );
+
+      validatedStudentIds = studentIds;
+    }
 
     const data = new Room({
       roomNo,
       schoolId,
       teacherId,
-      studentIds,
+      studentIds: validatedStudentIds,
       createdBy: req.user.id,
     });
 
     await data.save();
 
-    await Promise.all(
-      studentIds.map(async (stuId) => {
-        await Child.findByIdAndUpdate(
-          stuId,
-          { roomId: data._id },
-          { new: true }
-        );
-      })
-    );
+    if (validatedStudentIds.length > 0) {
+      await Promise.all(
+        validatedStudentIds.map(async (stuId) => {
+          await Child.findByIdAndUpdate(
+            stuId,
+            { roomId: data._id },
+            { new: true }
+          );
+        })
+      );
+    }
 
     return res
       .status(201)
@@ -512,7 +524,13 @@ export const createRoomHandle = async (req, res) => {
     if (error.code === 11000) {
       return res
         .status(400)
-        .json(new ApiResponse(400, {}, `Room number ${error.keyValue.roomNo} already exists in this school`));
+        .json(
+          new ApiResponse(
+            400,
+            {},
+            `Room number ${error.keyValue.roomNo} already exists in this school`
+          )
+        );
     }
     return res
       .status(500)
