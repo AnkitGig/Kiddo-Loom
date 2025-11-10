@@ -9,6 +9,7 @@ import { sendPasswordMail, sendForgotPasswordMail } from "../utils/email.js";
 import Joi from "joi";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import { Teacher } from "../models/teacher/Teacher.js";
@@ -410,68 +411,156 @@ export const childStatusUpdate = async (req, res) => {
 export const assignChildrenToRoom = async (req, res) => {
   try {
     const { roomId, schoolId, teacherId, studentIds } = req.body;
-    
+
     const schema = Joi.object({
       roomId: Joi.string().required(),
       schoolId: Joi.string().required(),
       teacherId: Joi.string().required(),
-      studentIds: Joi.array().items(Joi.string()).min(1).required()
+      studentIds: Joi.array().items(Joi.string()).min(1).required(),
     });
 
     const { error } = schema.validate(req.body);
     if (error) {
-      return res.status(400).json(new ApiResponse(400, {}, error.details[0].message));
+      return res
+        .status(400)
+        .json(new ApiResponse(400, {}, error.details[0].message));
+    }
+
+    // Validate ObjectId formats for room, school, teacher and student ids
+    const invalidFormatIds = [];
+    if (!mongoose.Types.ObjectId.isValid(roomId))
+      invalidFormatIds.push(`roomId: ${roomId}`);
+    if (!mongoose.Types.ObjectId.isValid(schoolId))
+      invalidFormatIds.push(`schoolId: ${schoolId}`);
+    if (!mongoose.Types.ObjectId.isValid(teacherId))
+      invalidFormatIds.push(`teacherId: ${teacherId}`);
+    const incomingIds = Array.isArray(studentIds) ? studentIds : [];
+    const invalidStudentFormat = incomingIds.filter(
+      (id) => !mongoose.Types.ObjectId.isValid(id)
+    );
+    if (invalidStudentFormat.length) {
+      invalidFormatIds.push(`studentIds: ${invalidStudentFormat.join(", ")}`);
+    }
+
+    if (invalidFormatIds.length) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            {},
+            `Invalid id format(s): ${invalidFormatIds.join("; ")}`
+          )
+        );
     }
 
     // Verify the room exists and belongs to school
     const room = await Room.findOne({ _id: roomId, schoolId });
     if (!room) {
-      return res.status(404).json(new ApiResponse(404, {}, `Room not found in this school`));
+      return res
+        .status(404)
+        .json(new ApiResponse(404, {}, `Room not found in this school`));
     }
 
     // Verify teacher exists and belongs to school
-    const teacher = await Teacher.findOne({ _id: teacherId }).populate('schoolId');
+    const teacher = await Teacher.findOne({ _id: teacherId }).populate(
+      "schoolId"
+    );
     if (!teacher) {
-      return res.status(404).json(new ApiResponse(404, {}, `Teacher not found`));
+      return res
+        .status(404)
+        .json(new ApiResponse(404, {}, `Teacher not found`));
     }
 
-    if (teacher.schoolId._id.toString() !== schoolId || teacher.schoolId.adminId.toString() !== req.user.id) {
-      return res.status(401).json(new ApiResponse(401, {}, `Unauthorized Access`));
+    if (
+      teacher.schoolId._id.toString() !== schoolId ||
+      teacher.schoolId.adminId.toString() !== req.user.id
+    ) {
+      return res
+        .status(401)
+        .json(new ApiResponse(401, {}, `Unauthorized Access`));
     }
 
-    // Verify all students exist and belong to school
+    // Verify all students exist and belong to school and dedupe incoming IDs
     const invalidStudents = [];
-    for (const id of studentIds) {
+    const foundStudents = {};
+    const incomingUniqueIds = Array.from(
+      new Set((studentIds || []).map((id) => id.toString()))
+    );
+
+    for (const id of incomingUniqueIds) {
       const student = await Child.findById(id);
       if (!student || student.schoolId.toString() !== schoolId) {
         invalidStudents.push(id);
+      } else {
+        foundStudents[id] = student;
       }
     }
 
     if (invalidStudents.length) {
-      return res.status(400).json(
-        new ApiResponse(400, {}, `Students do not belong to school: ${invalidStudents.join(", ")}`)
-      );
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            {},
+            `Students do not belong to school: ${invalidStudents.join(", ")}`
+          )
+        );
     }
 
-    // Update room with new students
-    room.studentIds = [...new Set([...room.studentIds, ...studentIds])]; 
+    // Prevent adding the same student twice to the room (handle ObjectId/string mix)
+    const existingIdsSet = new Set(
+      (room.studentIds || []).map((id) => id.toString())
+    );
+    const toAdd = incomingUniqueIds.filter((id) => !existingIdsSet.has(id));
+    const skipped = incomingUniqueIds.filter((id) => existingIdsSet.has(id));
+
+    if (toAdd.length === 0) {
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            { id: room._id, added: [], skipped },
+            `No new students to assign; skipped existing students`
+          )
+        );
+    }
+
+    // Merge and save room student IDs (keep unique)
+    const mergedIds = Array.from(
+      new Set([...(room.studentIds || []).map((id) => id.toString()), ...toAdd])
+    );
+    room.studentIds = mergedIds;
     room.teacherId = teacherId;
     await room.save();
 
-    // Update all students with new room
+    // Update only newly added students with new room
     await Promise.all(
-      studentIds.map(async (stuId) => {
-        await Child.findByIdAndUpdate(stuId, { roomId: room._id }, { new: true });
+      toAdd.map(async (stuId) => {
+        await Child.findByIdAndUpdate(
+          stuId,
+          { roomId: room._id },
+          { new: true }
+        );
       })
     );
 
-    return res.status(200).json(
-      new ApiResponse(200, { id: room._id }, `Students assigned to room successfully`),
-    );
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { id: room._id, added: toAdd, skipped },
+          `Students assigned to room successfully`
+        )
+      );
   } catch (error) {
     console.error(`Error assigning children to room:`, error);
-    return res.status(500).json(new ApiResponse(500, {}, `Internal server error`));
+    return res
+      .status(500)
+      .json(new ApiResponse(500, {}, `Internal server error`));
   }
 };
 

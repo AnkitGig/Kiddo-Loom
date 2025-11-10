@@ -13,7 +13,7 @@ import {
 from "../controllers/adminController.js"
 
 import { upload } from "../middlewares/multer.js";
-import { auth, isSuperAdmin } from "../middlewares/auth.js";
+import { auth, isSuperAdmin , isAdmin} from "../middlewares/auth.js";
 
 
 const adminRouter = Router();
