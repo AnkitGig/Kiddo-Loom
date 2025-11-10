@@ -7,7 +7,8 @@ import {
     changePasswordHandle,
     teacherStatusUpdate,
     createRoomHandle,
-    childStatusUpdate
+    childStatusUpdate,
+    assignChildrenToRoom
 }
 from "../controllers/adminController.js"
 
@@ -25,6 +26,7 @@ adminRouter.post("/change-password", changePasswordHandle);
 adminRouter.post("/teacher/status", auth, teacherStatusUpdate )
 adminRouter.post("/child/status", auth, childStatusUpdate )
 adminRouter.post("/room", auth, createRoomHandle)
+adminRouter.post("/room/assign-children", auth, assignChildrenToRoom)
 
 
 

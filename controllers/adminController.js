@@ -407,6 +407,74 @@ export const childStatusUpdate = async (req, res) => {
   }
 };
 
+export const assignChildrenToRoom = async (req, res) => {
+  try {
+    const { roomId, schoolId, teacherId, studentIds } = req.body;
+    
+    const schema = Joi.object({
+      roomId: Joi.string().required(),
+      schoolId: Joi.string().required(),
+      teacherId: Joi.string().required(),
+      studentIds: Joi.array().items(Joi.string()).min(1).required()
+    });
+
+    const { error } = schema.validate(req.body);
+    if (error) {
+      return res.status(400).json(new ApiResponse(400, {}, error.details[0].message));
+    }
+
+    // Verify the room exists and belongs to school
+    const room = await Room.findOne({ _id: roomId, schoolId });
+    if (!room) {
+      return res.status(404).json(new ApiResponse(404, {}, `Room not found in this school`));
+    }
+
+    // Verify teacher exists and belongs to school
+    const teacher = await Teacher.findOne({ _id: teacherId }).populate('schoolId');
+    if (!teacher) {
+      return res.status(404).json(new ApiResponse(404, {}, `Teacher not found`));
+    }
+
+    if (teacher.schoolId._id.toString() !== schoolId || teacher.schoolId.adminId.toString() !== req.user.id) {
+      return res.status(401).json(new ApiResponse(401, {}, `Unauthorized Access`));
+    }
+
+    // Verify all students exist and belong to school
+    const invalidStudents = [];
+    for (const id of studentIds) {
+      const student = await Child.findById(id);
+      if (!student || student.schoolId.toString() !== schoolId) {
+        invalidStudents.push(id);
+      }
+    }
+
+    if (invalidStudents.length) {
+      return res.status(400).json(
+        new ApiResponse(400, {}, `Students do not belong to school: ${invalidStudents.join(", ")}`)
+      );
+    }
+
+    // Update room with new students
+    room.studentIds = [...new Set([...room.studentIds, ...studentIds])]; 
+    room.teacherId = teacherId;
+    await room.save();
+
+    // Update all students with new room
+    await Promise.all(
+      studentIds.map(async (stuId) => {
+        await Child.findByIdAndUpdate(stuId, { roomId: room._id }, { new: true });
+      })
+    );
+
+    return res.status(200).json(
+      new ApiResponse(200, { id: room._id }, `Students assigned to room successfully`),
+    );
+  } catch (error) {
+    console.error(`Error assigning children to room:`, error);
+    return res.status(500).json(new ApiResponse(500, {}, `Internal server error`));
+  }
+};
+
 export const createRoomHandle = async (req, res) => {
   try {
     const { roomNo, schoolId, teacherId, studentIds } = req.body;
