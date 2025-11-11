@@ -11,6 +11,7 @@ import {
     markAttendenceHandle,
     childAttendanceHandle
 }  from "../controllers/parentController.js";
+import { getChildReportsByParent } from "../controllers/dailyReportController.js";
 
 
 
@@ -26,6 +27,7 @@ parenRouter.post("/child", auth, addChildHandle)
 parenRouter.get("/child", auth, myChildHandle)
 parenRouter.post("/child/attendance", auth, markAttendenceHandle)
 parenRouter.get("/child/attendance", auth, childAttendanceHandle)
+parenRouter.get("/child/daily-reports", auth, getChildReportsByParent)
 
 
 

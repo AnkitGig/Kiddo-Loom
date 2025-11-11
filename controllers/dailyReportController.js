@@ -24,16 +24,16 @@ export const getDailyReportHandle = async (req, res) => {
     // Verify child exists
     const child = await Child.findById(childId);
     if (!child)
-      return res
-        .status(404)
-        .json(new ApiResponse(404, {}, "Child not found"));
+      return res.status(404).json(new ApiResponse(404, {}, "Child not found"));
 
     // Verify room exists and teacher is assigned
     const room = await Room.findOne({ _id: roomId, teacherId: req.user.id });
     if (!room)
       return res
         .status(404)
-        .json(new ApiResponse(404, {}, "Room not found or not assigned to you"));
+        .json(
+          new ApiResponse(404, {}, "Room not found or not assigned to you")
+        );
 
     const today = new Date().toISOString().split("T")[0];
 
@@ -86,9 +86,7 @@ export const updateCheckInHandle = async (req, res) => {
       teacherId: req.user.id,
     });
     if (!report)
-      return res
-        .status(404)
-        .json(new ApiResponse(404, {}, "Report not found"));
+      return res.status(404).json(new ApiResponse(404, {}, "Report not found"));
 
     report.checkIn.time = time;
     report.checkIn.status = true;
@@ -126,9 +124,7 @@ export const updateCheckOutHandle = async (req, res) => {
       teacherId: req.user.id,
     });
     if (!report)
-      return res
-        .status(404)
-        .json(new ApiResponse(404, {}, "Report not found"));
+      return res.status(404).json(new ApiResponse(404, {}, "Report not found"));
 
     report.checkOut.time = time;
     report.checkOut.status = true;
@@ -153,7 +149,7 @@ export const updateActivitiesHandle = async (req, res) => {
     const schema = Joi.object({
       reportId: Joi.string().required(),
       activities: Joi.string().required(),
-        time: Joi.string().optional().allow(null),
+      time: Joi.string().optional().allow(null),
     });
 
     const { error } = schema.validate(req.body);
@@ -167,9 +163,7 @@ export const updateActivitiesHandle = async (req, res) => {
       teacherId: req.user.id,
     });
     if (!report)
-      return res
-        .status(404)
-        .json(new ApiResponse(404, {}, "Report not found"));
+      return res.status(404).json(new ApiResponse(404, {}, "Report not found"));
 
     report.activities = activities;
     report.activitiesTime = time || null;
@@ -209,9 +203,7 @@ export const updateHealthHandle = async (req, res) => {
       teacherId: req.user.id,
     });
     if (!report)
-      return res
-        .status(404)
-        .json(new ApiResponse(404, {}, "Report not found"));
+      return res.status(404).json(new ApiResponse(404, {}, "Report not found"));
 
     report.health = health;
     report.healthCustomField = customField || "";
@@ -252,9 +244,7 @@ export const updateTemperatureHandle = async (req, res) => {
       teacherId: req.user.id,
     });
     if (!report)
-      return res
-        .status(404)
-        .json(new ApiResponse(404, {}, "Report not found"));
+      return res.status(404).json(new ApiResponse(404, {}, "Report not found"));
 
     report.temperature.value = value;
     report.temperature.unit = unit;
@@ -296,9 +286,7 @@ export const updateMoodHandle = async (req, res) => {
       teacherId: req.user.id,
     });
     if (!report)
-      return res
-        .status(404)
-        .json(new ApiResponse(404, {}, "Report not found"));
+      return res.status(404).json(new ApiResponse(404, {}, "Report not found"));
 
     report.mood = mood;
     report.moodTime = time || null;
@@ -337,9 +325,7 @@ export const updateSuppliesHandle = async (req, res) => {
       teacherId: req.user.id,
     });
     if (!report)
-      return res
-        .status(404)
-        .json(new ApiResponse(404, {}, "Report not found"));
+      return res.status(404).json(new ApiResponse(404, {}, "Report not found"));
 
     report.supplies = supplies;
     report.suppliesTime = time || null;
@@ -378,9 +364,7 @@ export const updateNapsHandle = async (req, res) => {
       teacherId: req.user.id,
     });
     if (!report)
-      return res
-        .status(404)
-        .json(new ApiResponse(404, {}, "Report not found"));
+      return res.status(404).json(new ApiResponse(404, {}, "Report not found"));
 
     report.naps = naps;
     report.napsTime = time || null;
@@ -419,9 +403,7 @@ export const updateNotesHandle = async (req, res) => {
       teacherId: req.user.id,
     });
     if (!report)
-      return res
-        .status(404)
-        .json(new ApiResponse(404, {}, "Report not found"));
+      return res.status(404).json(new ApiResponse(404, {}, "Report not found"));
 
     report.notes = notes;
     report.notesTime = time || null;
@@ -460,9 +442,7 @@ export const updateNameToFaceHandle = async (req, res) => {
       teacherId: req.user.id,
     });
     if (!report)
-      return res
-        .status(404)
-        .json(new ApiResponse(404, {}, "Report not found"));
+      return res.status(404).json(new ApiResponse(404, {}, "Report not found"));
 
     report.nameToFace = nameToFace;
     report.nameToFaceTime = time || null;
@@ -470,9 +450,7 @@ export const updateNameToFaceHandle = async (req, res) => {
 
     return res
       .status(200)
-      .json(
-        new ApiResponse(200, report, "Name to face updated successfully")
-      );
+      .json(new ApiResponse(200, report, "Name to face updated successfully"));
   } catch (error) {
     console.error("Error updating name to face:", error);
     return res
@@ -503,9 +481,7 @@ export const updateMoveRoomsHandle = async (req, res) => {
       teacherId: req.user.id,
     });
     if (!report)
-      return res
-        .status(404)
-        .json(new ApiResponse(404, {}, "Report not found"));
+      return res.status(404).json(new ApiResponse(404, {}, "Report not found"));
 
     report.moveRooms = moveRooms;
     report.moveRoomsTime = time || null;
@@ -542,16 +518,16 @@ export const submitDailyReportHandle = async (req, res) => {
       teacherId: req.user.id,
     });
     if (!report)
-      return res
-        .status(404)
-        .json(new ApiResponse(404, {}, "Report not found"));
+      return res.status(404).json(new ApiResponse(404, {}, "Report not found"));
 
     report.isSubmitted = true;
     await report.save();
 
     return res
       .status(200)
-      .json(new ApiResponse(200, report, "Daily report submitted successfully"));
+      .json(
+        new ApiResponse(200, report, "Daily report submitted successfully")
+      );
   } catch (error) {
     console.error("Error submitting daily report:", error);
     return res
@@ -581,17 +557,65 @@ export const getChildReportsHandle = async (req, res) => {
     }).sort({ date: -1 });
 
     if (!reports || reports.length === 0)
+      return res.status(404).json(new ApiResponse(404, {}, "No reports found"));
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, reports, "Reports retrieved successfully"));
+  } catch (error) {
+    console.error("Error getting reports:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, {}, "Internal Server Error"));
+  }
+};
+
+// Get Child Resports by Parent for Today
+export const getChildReportsByParent = async (req, res) => {
+  try {
+    const { childId } = req.query;
+
+    const schema = Joi.object({
+      childId: Joi.string().required(),
+    });
+
+    const { error } = schema.validate(req.query);
+    if (error)
+      return res
+        .status(400)
+        .json(new ApiResponse(400, {}, error.details[0].message));
+
+    const child = await Child.findById(childId);
+    if (!child)
+      return res.status(404).json(new ApiResponse(404, {}, "Child not found"));
+
+    if (child.parentId && child.parentId.toString() !== req.user.id)
+      return res
+        .status(401)
+        .json(new ApiResponse(401, {}, "Unauthorized access"));
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const reports = await DailyReport.find({
+      childId,
+      date: { $gte: today, $lt: tomorrow },
+    }).sort({ date: -1 });
+
+    if (!reports || reports.length === 0)
       return res
         .status(404)
-        .json(new ApiResponse(404, {}, "No reports found"));
+        .json(new ApiResponse(404, {}, "No reports found for today"));
 
     return res
       .status(200)
       .json(
-        new ApiResponse(200, reports, "Reports retrieved successfully")
+        new ApiResponse(200, reports, "Today's reports retrieved successfully")
       );
   } catch (error) {
-    console.error("Error getting reports:", error);
+    console.error("Error getting today's reports for parent:", error);
     return res
       .status(500)
       .json(new ApiResponse(500, {}, "Internal Server Error"));
