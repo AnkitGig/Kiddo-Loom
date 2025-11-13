@@ -5,6 +5,7 @@ import { Admin } from "../models/admin/Admin.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { generateRandomString, getExpirationTime } from "../utils/helpers.js";
 import { sendPasswordMail, sendForgotPasswordMail } from "../utils/email.js";
+import { uploadFile } from "../utils/customUploader.js";
 
 import Joi from "joi";
 import bcrypt from "bcryptjs";
@@ -123,15 +124,35 @@ export const addSchoolHandle = async (req, res) => {
     if (req.files && req.files.length > 0) {
       const captions = req.body.captions;
       const captionsArray = Array.isArray(captions) ? captions : [captions];
-      req.files.forEach((file, index) => {
-        photoArray.push({
-          url: file.filename,
-          caption: captionsArray[index] || null,
-        });
-      });
+      
+      for (let index = 0; index < req.files.length; index++) {
+        const file = req.files[index];
+        try {
+          const uploadedUrl = await uploadFile(file, { folder: "school-images", publicRead: true });
+          
+          let fullUrl = uploadedUrl;
+          
+          if (uploadedUrl && !uploadedUrl.startsWith('http')) {
+            const region = process.env.AWS_REGION || 'eu-north-1';
+            const bucket = process.env.AWS_S3_BUCKET_NAME;
+            fullUrl = `https://${bucket}.s3.${region}.amazonaws.com${uploadedUrl}`;
+          }
+          
+          console.log(`Full Image URL saved: ${fullUrl}`);
+          
+          photoArray.push({
+            url: fullUrl,
+            caption: captionsArray[index] || null,
+          });
+        } catch (uploadError) {
+          console.error(`Error uploading file ${file.originalname}:`, uploadError);
+          throw uploadError;
+        }
+      }
     }
 
-    // Create new school
+    console.log(`Complete photo array:`, JSON.stringify(photoArray, null, 2));
+
     const school = new School({
       name,
       description,

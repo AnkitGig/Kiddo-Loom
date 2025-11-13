@@ -12,13 +12,13 @@ import {
 }
 from "../controllers/adminController.js"
 
-import { upload } from "../middlewares/multer.js";
+import { multerUpload } from "../utils/customUploader.js";
 import { auth, isSuperAdmin , isAdmin} from "../middlewares/auth.js";
 
 
 const adminRouter = Router();
 
-adminRouter.post("/school", auth, upload.array("images"), addSchoolHandle);
+adminRouter.post("/school", auth, multerUpload.array("images"), addSchoolHandle);
 adminRouter.post("/login", loginHandle);
 adminRouter.post("/forgot-password", forgotPasswordHandle);
 adminRouter.get("/verify-password/:id", verifyPasswordHandle);
