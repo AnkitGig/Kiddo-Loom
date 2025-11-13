@@ -5,7 +5,6 @@ import superAdminRouter from "./superAdmin.routes.js";
 import adminRouter from "./admin.routes.js";
 import teacherRouter from "./teacher.routes.js";
 import dailyReportRouter from "./dailyReport.routes.js";
-import uploadRouter from "./upload.routes.js";
 
 
 
@@ -17,7 +16,6 @@ rootRouter.use("/admin", adminRouter)
 rootRouter.use("/super-admin", superAdminRouter);
 rootRouter.use("/teachers", teacherRouter);
 rootRouter.use("/daily-reports", dailyReportRouter);
-rootRouter.use("/upload", uploadRouter);
 
 
 
