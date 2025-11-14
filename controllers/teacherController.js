@@ -471,3 +471,83 @@ export const setDefaultRoomHandle = async (req, res) => {
     return res.status(500).json(new ApiResponse(500, {}, "Internal Server Error"));
   }
 };
+
+export const updateProfileHandle = async (req, res) => {
+  try {
+    const { name, phone, city, address, education, skills } = req.body;
+    
+    const schema = Joi.object({
+      name: Joi.string().trim().min(2).max(100),
+      phone: Joi.string(),
+      city: Joi.string(),
+      address: Joi.string(),
+      education: Joi.string(),
+      skills: Joi.alternatives().try(
+        Joi.array().items(Joi.string()),
+        Joi.string().custom((value, helpers) => {
+          if (typeof value === 'string') {
+            return value.split(',').map(s => s.trim());
+          }
+          return value;
+        })
+      ),
+    });
+
+    const { error } = schema.validate(req.body);
+    if (error) {
+      return res.status(400).json(new ApiResponse(400, {}, error.details[0].message));
+    }
+
+    const teacher = await Teacher.findById(req.user.id);
+    if (!teacher) {
+      return res.status(404).json(new ApiResponse(404, {}, "Teacher not found"));
+    }
+
+    if (name) teacher.name = name;
+    if (phone) teacher.phone = phone;
+    if (city) teacher.city = city;
+    if (address) teacher.address = address;
+    if (education) teacher.education = education;
+    if (skills) {
+      teacher.skills = Array.isArray(skills) ? skills : skills.split(',').map(s => s.trim());
+    }
+
+    if (req.files && req.files.length > 0) {
+      try {
+        const file = req.files[0];
+        const { uploadFile } = await import("../utils/customUploader.js");
+        const imageUrl = await uploadFile(file, {
+          folder: "profile-images",
+          useS3: true,
+          deleteLocal: true,
+        });
+        teacher.profileImage = imageUrl;
+      } catch (uploadError) {
+        console.error("Error uploading profile image:", uploadError);
+        return res.status(500).json(new ApiResponse(500, {}, "Error uploading profile image"));
+      }
+    }
+
+    await teacher.save();
+
+    const updatedTeacher = {
+      id: teacher._id,
+      name: teacher.name,
+      email: teacher.email,
+      phone: teacher.phone,
+      city: teacher.city,
+      address: teacher.address,
+      gender: teacher.gender,
+      education: teacher.education,
+      skills: teacher.skills,
+      profileImage: teacher.profileImage,
+    };
+
+    return res.status(200).json(
+      new ApiResponse(200, updatedTeacher, "Profile updated successfully")
+    );
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    return res.status(500).json(new ApiResponse(500, {}, "Internal Server Error"));
+  }
+};
